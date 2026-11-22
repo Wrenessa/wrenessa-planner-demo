@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="daylight">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Wrenessa Planner — ADHD Budget &amp; Paycheck Planner</title>
+  <meta name="description" content="A calm, offline ADHD-friendly budget and paycheck planner. Know what's safe to spend today.">
+  <meta name="theme-color" content="#FAF6EF">
+  <link rel="icon" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Gentle catch-up, shown only after 7+ days away -->
+  <section id="awayCard" class="away-card" hidden>
+    <h2>Welcome back. No rush.</h2>
+    <p>You've been away a little while. Three small steps and you're caught up — nothing is broken, no streak lost.</p>
+    <ol class="away-steps">
+      <li>
+        <label for="awayBalance">Your current balance is</label>
+        <input id="awayBalance" type="number" min="0" step="0.01" inputmode="decimal">
+        <button id="awayBalanceSave" class="btn btn-primary">Save balance</button>
+      </li>
+      <li>
+        <span>Anything you spent while away? Log it below when you're ready — or skip it.</span>
+      </li>
+      <li>
+        <span>That's it. You're all caught up.</span>
+        <button id="awayDismiss" class="btn btn-quiet">All caught up</button>
+      </li>
+    </ol>
+  </section>
+
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">W</span>
+      <span class="brand-name">Wrenessa <em>Planner</em></span>
+      <span class="demo-badge" id="demoBadge">Free Demo</span>
+    </div>
+    <div class="header-controls">
+      <label class="currency-wrap" for="currencySelect">
+        <span class="visually-hidden">Currency</span>
+        <select id="currencySelect" aria-label="Currency">
+          <option value="USD">$ USD</option>
+          <option value="GBP">£ GBP</option>
+          <option value="EUR">€ EUR</option>
+          <option value="CAD">CA$ CAD</option>
+          <option value="AUD">AU$ AUD</option>
+          <option value="INR">₹ INR</option>
+          <option value="PKR">Rs PKR</option>
+        </select>
+      </label>
+      <button id="themeToggle" class="btn btn-icon" aria-label="Switch theme" title="Switch theme">☾</button>
+      <label class="mode-switch" for="modeToggle">
+        <span id="modeLabel">Simple</span>
+        <input type="checkbox" id="modeToggle">
+        <span class="switch" aria-hidden="true"></span>
+      </label>
+    </div>
+  </header>
+
+  <nav class="section-nav" aria-label="Sections">
+    <button class="nav-pill active" data-nav="today" type="button" style="--pill:#5F7A5C"><span class="nav-dot" aria-hidden="true"></span>Today</button>
+    <button class="nav-pill" data-nav="month" type="button" style="--pill:#5B7FA6"><span class="nav-dot" aria-hidden="true"></span>Month</button>
+    <button class="nav-pill" data-nav="bills" type="button" style="--pill:#A86A1B"><span class="nav-dot" aria-hidden="true"></span>Bills</button>
+    <button class="nav-pill" data-nav="income" type="button" style="--pill:#4E9B7A"><span class="nav-dot" aria-hidden="true"></span>Income</button>
+    <button class="nav-pill" data-nav="goals" type="button" style="--pill:#7C9070"><span class="nav-dot" aria-hidden="true"></span>Goals</button>
+    <button class="nav-pill" data-nav="debt" type="button" style="--pill:#A34A28"><span class="nav-dot" aria-hidden="true"></span>Debt</button>
+    <button class="nav-pill" data-nav="envelopes" type="button" style="--pill:#A86A8B"><span class="nav-dot" aria-hidden="true"></span>Envelopes</button>
+    <button class="nav-pill" data-nav="vault" type="button" style="--pill:#6B5B95"><span class="nav-dot" aria-hidden="true"></span>Pause Vault</button>
+    <button class="nav-pill" data-nav="settings" type="button" style="--pill:#7A7268"><span class="nav-dot" aria-hidden="true"></span>Settings</button>
+  </nav>
+
+  <main id="app" class="app">
+    <!-- Hero: the one number that matters -->
+    <section class="hero" aria-labelledby="heroTitle">
+      <p class="hero-eyebrow" id="heroTitle">Safe to spend today</p>
+      <p class="hero-number" id="safeNumber" aria-live="polite">$0.00</p>
+      <p class="hero-sub" id="safeSub">per day until payday</p>
+      <p class="hero-meta" id="paydayLine"></p>
+      <button id="calcBtn" class="btn btn-quiet">How is this calculated?</button>
+      <p class="hero-note" id="safeNote" hidden></p>
+    </section>
+
+    <!-- Quick spend -->
+    <section class="panel quick" aria-labelledby="quickTitle">
+      <h2 id="quickTitle">Log a spend</h2>
+      <form id="quickForm" class="quick-form" autocomplete="off">
+        <input id="quickInput" type="text" placeholder="Try “45 groceries” or “12.50 coffee”" aria-label="Log a spend, for example 45 groceries">
+        <button type="button" id="micBtn" class="btn btn-icon" aria-label="Log by voice" title="Log by voice">🎙</button>
+        <button type="submit" class="btn btn-primary">Log it</button>
+      </form>
+      <p class="mic-status" id="micStatus" hidden>Listening… say an amount and what it was for.</p>
+      <p class="demo-count" id="demoCount" hidden>Free demo: 0 of 30 spends used</p>
+      <div class="demo-limit" id="demoLimit" hidden>Demo limit reached — get the full version for unlimited entries &amp; Home Screen offline mode</div>
+      <div class="chips" id="quickChips" role="group" aria-label="Quick amounts"></div>
+      <ul class="today-list" id="todayList"></ul>
+    </section>
+
+    <!-- Everything below hides in Simple mode -->
+    <div id="fullSections">
+      <section class="panel" id="calendarSection" aria-labelledby="calendarTitle">
+        <h2 id="calendarTitle">Month view</h2>
+        <div class="cal-controls">
+          <button id="calPrev" class="btn btn-icon" type="button" aria-label="Previous month">‹</button>
+          <span id="calTitle" class="cal-title" aria-live="polite"></span>
+          <button id="calNext" class="btn btn-icon" type="button" aria-label="Next month">›</button>
+          <button id="calToday" class="btn" type="button">Today</button>
+        </div>
+        <div class="cal-grid" id="calGrid"></div>
+      </section>
+
+      <section class="panel" id="incomeSection" aria-labelledby="incomeTitle">
+        <h2 id="incomeTitle">Payday &amp; income</h2>
+        <div class="pay-card">
+          <label for="payAmount">Paycheck amount</label>
+          <input id="payAmount" type="number" min="0" step="0.01" inputmode="decimal">
+          <label for="paySchedule">Pay schedule</label>
+          <select id="paySchedule">
+            <option value="weekly">Weekly</option>
+            <option value="biweekly">Every 2 weeks</option>
+            <option value="semimonthly">1st &amp; 15th</option>
+            <option value="monthly">Monthly</option>
+          </select>
+          <div id="payExtra"></div>
+          <p class="muted" id="nextPaydayLine"></p>
+        </div>
+      </section>
+
+      <section class="panel" id="billsSection" aria-labelledby="billsTitle">
+        <h2 id="billsTitle">Bills</h2>
+        <div class="bills-card">
+          <h3>Upcoming bills</h3>
+          <ul class="bill-list" id="billList"></ul>
+          <form id="billForm" class="inline-form" autocomplete="off">
+            <input id="billName" type="text" placeholder="Bill name" required>
+            <input id="billAmount" type="number" min="0" step="0.01" placeholder="Amount" required>
+            <input id="billDay" type="number" min="1" max="31" placeholder="Due day" required>
+            <button type="submit" class="btn btn-primary">Add bill</button>
+          </form>
+        </div>
+      </section>
+
+      <section class="panel" id="sinkingSection" aria-labelledby="sinkingTitle">
+        <h2 id="sinkingTitle">Sinking funds <span class="muted">— big yearly costs, split monthly</span></h2>
+        <ul class="fund-list" id="fundList"></ul>
+        <form id="fundForm" class="inline-form" autocomplete="off">
+          <input id="fundName" type="text" placeholder="e.g. Car insurance" required>
+          <input id="fundAnnual" type="number" min="0" step="0.01" placeholder="Yearly amount" required>
+          <button type="submit" class="btn btn-primary">Add fund</button>
+        </form>
+      </section>
+
+      <section class="panel" id="goalsSection" aria-labelledby="goalsTitle">
+        <h2 id="goalsTitle">Savings jars</h2>
+        <div class="jar-grid" id="jarGrid"></div>
+        <form id="goalForm" class="inline-form" autocomplete="off">
+          <input id="goalName" type="text" placeholder="Goal name" required>
+          <input id="goalTarget" type="number" min="0" step="0.01" placeholder="Target" required>
+          <button type="submit" class="btn btn-primary">Add jar</button>
+        </form>
+      </section>
+
+      <section class="panel" id="debtSection" aria-labelledby="debtTitle">
+        <h2 id="debtTitle">Debts</h2>
+        <div class="strategy-row">
+          <span>Pay-off order:</span>
+          <button id="strategyBtn" class="btn btn-quiet" aria-pressed="false">Snowball — smallest first</button>
+        </div>
+        <ul class="debt-list" id="debtList"></ul>
+        <form id="debtForm" class="inline-form" autocomplete="off">
+          <input id="debtName" type="text" placeholder="e.g. Credit card" required>
+          <input id="debtBalance" type="number" min="0" step="0.01" placeholder="Balance" required>
+          <input id="debtApr" type="number" min="0" step="0.1" placeholder="APR %" required>
+          <button type="submit" class="btn btn-primary">Add debt</button>
+        </form>
+      </section>
+
+      <section class="panel" id="envelopesSection" aria-labelledby="envTitle">
+        <h2 id="envTitle">Envelopes <span class="muted">— monthly budgets by category</span></h2>
+        <div class="env-grid" id="envGrid"></div>
+        <form id="envForm" class="inline-form" autocomplete="off">
+          <input id="envName" type="text" placeholder="e.g. Groceries" required>
+          <input id="envMonthly" type="number" min="0" step="0.01" placeholder="Monthly budget" required>
+          <button type="submit" class="btn btn-primary">Add envelope</button>
+        </form>
+      </section>
+
+      <section class="panel vault" id="vaultSection" aria-labelledby="vaultTitle">
+        <h2 id="vaultTitle">Pause before buying <span class="muted">— the 24-hour vault</span></h2>
+        <p class="muted">Want something on impulse? Park it here. If you still want it in 24 hours, buy it. If not, skip it and keep the money.</p>
+        <p class="saved-line">Money saved by pausing: <strong id="vaultSaved">$0.00</strong></p>
+        <form id="vaultForm" class="inline-form" autocomplete="off">
+          <input id="vaultName" type="text" placeholder="e.g. Headphones" required>
+          <input id="vaultAmount" type="number" min="0" step="0.01" placeholder="Price" required>
+          <button type="submit" class="btn btn-primary">Park it for 24h</button>
+        </form>
+        <ul class="vault-list" id="vaultList"></ul>
+      </section>
+
+      <section class="panel" id="dumpSection" aria-labelledby="dumpTitle">
+        <h2 id="dumpTitle">Brain dump</h2>
+        <p class="muted">Get it out of your head. No numbers, no judgement — just the thought.</p>
+        <textarea id="brainDump" rows="4" placeholder="Anything on your mind? Write it here…" aria-label="Brain dump notes"></textarea>
+        <p class="muted small"><span id="dumpCount">0</span> characters · saved automatically</p>
+      </section>
+
+      <section class="panel" id="txSection" aria-labelledby="txTitle">
+        <h2 id="txTitle">All spending</h2>
+        <ul class="tx-list" id="txList"></ul>
+        <p class="muted small" id="txEmpty" hidden>Nothing logged yet. Your first spend will show up here.</p>
+      </section>
+
+      <section class="panel settings" id="settingsSection" aria-labelledby="settingsTitle">
+        <h2 id="settingsTitle">Your data</h2>
+        <p class="muted">Everything lives on this device only — no account, no server. Back it up whenever you like.</p>
+        <div class="settings-actions">
+          <button id="exportJsonBtn" class="btn">Export backup (JSON)</button>
+          <button id="exportCsvBtn" class="btn">Export spending (CSV)</button>
+          <label class="btn" for="importJsonInput">Import backup (JSON)</label>
+          <input id="importJsonInput" type="file" accept="application/json,.json" hidden>
+          <button id="demoBtn" class="btn">Load demo data</button>
+          <button id="resetBtn" class="btn btn-danger">Start fresh with my numbers</button>
+        </div>
+        <p class="muted small">Offline ready — add this to your home screen and it works without internet.</p>
+      </section>
+    </div>
+  </main>
+
+  <!-- Calculation breakdown -->
+  <div id="calcModal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="calcTitle">
+    <div class="modal-card">
+      <h2 id="calcTitle">How safe to spend is worked out</h2>
+      <div id="calcBody"></div>
+      <button id="calcClose" class="btn btn-primary">Got it</button>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script>window.WRENISSA_DEMO = true;</script>
+  <script src="app.js"></script>
+</body>
+</html>
